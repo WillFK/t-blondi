@@ -32,6 +32,35 @@ const puppeteer = require('puppeteer');
     // TODO fix this function / async mess
     function extractDataChannel() {
         (async () => {
+            function exportData(data) {
+                const csv = [["Title", "Subscriptions", "Views", "Link"]]
+                for (i = 0; i < data.length; i++) {
+                    const row = []
+                    const channelData = data[i]
+                    row.push(channelData.title.split(",").join(" "))
+                    if (channelData.subscriptions)
+                        row.push(channelData.subscriptions.split(",").join(""))
+                    else 
+                        row.push("")
+                    if (channelData.views)
+                        row.push(channelData.views.split(",").join(""))
+                    else 
+                        row.push("")
+                    row.push(channelData.channel)
+                    csv.push(row.join(","))
+                }
+                console.log(data)
+                console.log(csv)
+                const fs = require('fs');
+                fs.writeFile("exp.csv", csv.join("\n"), function(err) {
+                    if(err) {
+                        return console.log(err)
+                    }
+
+                    console.log("The file was saved!")
+                }); 
+            }
+            
             if (channelLinks.length > 0) {
                 const channel = `${channelLinks.shift()}/about`
                 console.log(`extracting data from ${channel}`)
@@ -83,7 +112,8 @@ const puppeteer = require('puppeteer');
                 extractDataChannel()
             } else {
                 browser.close()
-                console.log(channelsData)
+                //console.log(channelsData)
+                exportData(channelsData)
             }
         })()
     }
