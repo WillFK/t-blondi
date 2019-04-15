@@ -103,7 +103,7 @@ const puppeteer = require('puppeteer');
                 })
 
 
-                await page.screenshot({path: `screenshots/${data.title}.png`})
+                await page.screenshot({path: `screenshots/${data.title.split("/").join("-")}.png`})
 
                 data.channel = channel
 
