@@ -87,4 +87,5 @@ typings/
 
 screenshots/*
 !screenshots/.gitkeep
-
+properties.json
+exp.csv
