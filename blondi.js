@@ -225,8 +225,10 @@ if (fs.existsSync('./properties.json')) {
         
             })
 
+            const filename = JSON.stringify(data.title).replace(/\W/g, '')
+            data.filename = filename
 
-            await page.screenshot({path: `screenshots/${data.title.split("/").join("-")}.png`})
+            await page.screenshot({path: `screenshots/${filename}.png`})
 
             data.channel = _channel
 
