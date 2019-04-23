@@ -141,7 +141,7 @@ if (fs.existsSync('./properties.json')) {
 
                     // get "46k views" (for instance) span
                     const viewLabels = document.querySelectorAll("ytd-grid-video-renderer #metadata-line span:first-child")
-                    if (viewLabels > 0) {
+                    if (viewLabels.length > 0) {
                         var min = Number.MAX_SAFE_INTEGER
                     } else {
                         var min = 0
