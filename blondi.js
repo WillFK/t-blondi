@@ -7,6 +7,25 @@ if (fs.existsSync('./properties.json')) {
     properties = {}
 }
 
+var blacklist = []
+if (fs.existsSync('./blacklist.txt')) {
+    fs.readFile("./blacklist.txt", function(err, buf) {
+        blacklist = buf.toString().split("\n")
+        console.log("blacklisted channels/users")
+        console.log(blacklist)
+      })
+}
+
+function checkBlacklisted(channel) {
+    for (i = 0; i < blacklist.length; i++) {
+        if (channel.endsWith(blacklist[i])) {
+            console.log(`channel ${channel} is blacklisted`)
+            return true
+        }
+    }
+    return false
+}
+
 (async () => {
     
     const minChannelAmount = properties.minChannelAmount || 20 // default value
@@ -26,33 +45,45 @@ if (fs.existsSync('./properties.json')) {
     await page.goto(channelSearch)
     await page.screenshot({path: 'screenshots/channels.png'})
 
-   var itemCount = await page.evaluate(() => {
-       return document.querySelectorAll("a.yt-simple-endpoint.style-scope.ytd-channel-renderer").length
+   var _items = await page.evaluate(() => {
+       const elements = document.querySelectorAll("a.yt-simple-endpoint.style-scope.ytd-channel-renderer")
+       const output = []
+       for (var i = 0; i < elements.length; i++) {
+           output.push(elements[i].href)
+       }
+       return output
    })
+
+   _items = _items.concat([]).filter(x => !checkBlacklisted(x))
+   itemCount = _items.length
 
    console.log(`found ${itemCount} channels`)
 
    while (itemCount < minChannelAmount) {
        console.log(`not enough items...`)
-        itemCount = await page.evaluate(() => {
-            return document.querySelectorAll("a.yt-simple-endpoint.style-scope.ytd-channel-renderer").length
+        _items = _items = await page.evaluate(() => {
+            const elements = document.querySelectorAll("a.yt-simple-endpoint.style-scope.ytd-channel-renderer")
+            const output = []
+            for (var i = 0; i < elements.length; i++) {
+                output.push(elements[i].href)
+            }
+            return output
         })
+        
+        _items = _items.concat([]).filter(x => !checkBlacklisted(x))
+        itemCount = _items.length
+        
         console.log(`new item count...${itemCount}`)
         previousHeight = await page.evaluate('document.querySelector("ytd-app").scrollHeight');
         await page.evaluate('window.scrollTo(0, document.querySelector("ytd-app").scrollHeight)');
         await page.waitForFunction(`document.querySelector("ytd-app").scrollHeight > ${previousHeight}`);
    }
 
-    var channelLinks = await page.evaluate((limit) => {
-
-        const output = []
-        const links = document.querySelectorAll("a.yt-simple-endpoint.style-scope.ytd-channel-renderer")
-        for (i = 0; i < limit; i++) {
-            output.push(links[i].href)
-        }
-        return output
-
-    }, minChannelAmount)
+    var channelLinks = []
+    
+    for (i = 0; i < minChannelAmount; i++) {
+        channelLinks.push(_items[i])
+    }
 
     const channelsData = []
 

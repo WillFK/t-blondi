@@ -89,3 +89,4 @@ screenshots/*
 !screenshots/.gitkeep
 properties.json
 exp.csv
+blacklist.txt
