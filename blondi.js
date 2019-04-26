@@ -26,7 +26,13 @@ if (fs.existsSync('./blacklist_links.txt')) {
     const blacklisted_links = buf.toString().split("\n")
     console.log("blacklisted links")
     for (var i = 0; i < blacklisted_links.length; i++) {
-        const link = blacklisted_links[i].split("/")[4]
+        const splitted = blacklisted_links[i].split("/")
+        var link
+        if (splitted[0].startsWith("www")) {
+            link = blacklisted_links[i].split("/")[2]
+        } else {
+            link = blacklisted_links[i].split("/")[4]
+        } 
         if (link) {
             console.log(link)
             blacklist.push(link)
