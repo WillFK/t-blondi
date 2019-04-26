@@ -10,10 +10,29 @@ if (fs.existsSync('./properties.json')) {
 var blacklist = []
 if (fs.existsSync('./blacklist.txt')) {
     fs.readFile("./blacklist.txt", function(err, buf) {
-        blacklist = buf.toString().split("\n")
-        console.log("blacklisted channels/users")
-        console.log(blacklist)
+        blacklisted = buf.toString().split("\n")
+        for (var i = 0; i < blacklisted.length; i++) {
+            blacklistedItem = blacklisted[i]
+            if (blacklistedItem) {
+                console.log(blacklistedItem)
+                blacklist.push(blacklistedItem)
+            }
+        }
       })
+}
+
+if (fs.existsSync('./blacklist_links.txt')) {
+    fs.readFile("./blacklist_links.txt", function(err, buf) {
+    const blacklisted_links = buf.toString().split("\n")
+    console.log("blacklisted links")
+    for (var i = 0; i < blacklisted_links.length; i++) {
+        const link = blacklisted_links[i].split("/")[4]
+        if (link) {
+            console.log(link)
+            blacklist.push(link)
+        }
+    }
+  })
 }
 
 function checkBlacklisted(channel) {
