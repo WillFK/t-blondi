@@ -10,7 +10,7 @@ if (fs.existsSync('./properties.json')) {
 var blacklist = []
 if (fs.existsSync('./blacklist.txt')) {
     fs.readFile("./blacklist.txt", function(err, buf) {
-        blacklisted = buf.toString().split("\n")
+        blacklisted = buf.toString().replace("\r", "").split("\n")
         for (var i = 0; i < blacklisted.length; i++) {
             blacklistedItem = blacklisted[i]
             if (blacklistedItem) {
@@ -23,7 +23,7 @@ if (fs.existsSync('./blacklist.txt')) {
 
 if (fs.existsSync('./blacklist_links.txt')) {
     fs.readFile("./blacklist_links.txt", function(err, buf) {
-    const blacklisted_links = buf.toString().split("\n")
+    const blacklisted_links = buf.toString().replace("\r", "").split("\n")
     console.log("blacklisted links")
     for (var i = 0; i < blacklisted_links.length; i++) {
         const splitted = blacklisted_links[i].split("/")
