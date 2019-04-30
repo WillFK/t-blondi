@@ -10,9 +10,9 @@ if (fs.existsSync('./properties.json')) {
 var blacklist = []
 if (fs.existsSync('./blacklist.txt')) {
     fs.readFile("./blacklist.txt", function(err, buf) {
-        blacklisted = buf.toString().replace("\r", "").split("\n")
+        blacklisted = buf.toString().split("\n")
         for (var i = 0; i < blacklisted.length; i++) {
-            blacklistedItem = blacklisted[i]
+            blacklistedItem = blacklisted[i].replace("\r", "")
             if (blacklistedItem) {
                 console.log(blacklistedItem)
                 blacklist.push(blacklistedItem)
@@ -23,7 +23,7 @@ if (fs.existsSync('./blacklist.txt')) {
 
 if (fs.existsSync('./blacklist_links.txt')) {
     fs.readFile("./blacklist_links.txt", function(err, buf) {
-    const blacklisted_links = buf.toString().replace("\r", "").split("\n")
+    const blacklisted_links = buf.toString().split("\n")
     console.log("blacklisted links")
     for (var i = 0; i < blacklisted_links.length; i++) {
         const splitted = blacklisted_links[i].split("/")
@@ -33,9 +33,12 @@ if (fs.existsSync('./blacklist_links.txt')) {
         } else {
             link = blacklisted_links[i].split("/")[4]
         } 
+
+        if (link) link = link.replace("\r", "")
+
         if (link) {
-            console.log(link)
-            blacklist.push(link)
+            console.log(`blacklisting (link) ${link}`)
+            blacklist.push(link.replace("\r", ""))
         }
     }
   })
@@ -44,7 +47,7 @@ if (fs.existsSync('./blacklist_links.txt')) {
 function checkBlacklisted(channel) {
     for (i = 0; i < blacklist.length; i++) {
         if (channel.endsWith(blacklist[i])) {
-            console.log(`channel ${channel} is blacklisted`)
+            console.log(`channel ${channel} is blacklisted by ${blacklist[i]} - index: ${i}`)
             return true
         }
     }
