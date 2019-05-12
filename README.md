@@ -34,7 +34,7 @@ It's is possible to choose the amount of channels you want to scrap. You can als
 - `minAvgRecentViews`: will ignore channels with fewer average recent views than this value
 - `maxAvgRecentViews`: will ignore channels with more average recent views than this value
 
-It's possible to remove a filter by removing the line of by setting the value to `0`
+It's possible to remove a filter by removing the property or by setting the value to `0`
 
 
 ## BLACKLIST
@@ -43,7 +43,7 @@ There are two way to blacklist channels and users, and they can be used at the s
 If you want to blacklist by channel / user id, then:
 
 - create a file called `blacklist.txt`
-- then add to it the channels you want to ignore, like:
+- add the id of the channels you want to ignore to it, like:
 ```
 UCkGthGTWjI2awl1pqCQRncQ
 UCaYLBJfw6d8XqmNlL204lNg
@@ -53,7 +53,7 @@ ESLBRASIL
 If you want to blacklist by channel / user link, then
 
 - create a file called `blacklist_links.txt`
-- then add to it the link to the pages you want to ignore, like:
+- then insert the link of the pages you want to ignore to the file, like:
 ```
 https://www.youtube.com/user/ThePhylol/
 https://www.youtube.com/user/albertsunzheng/about
