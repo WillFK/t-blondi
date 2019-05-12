@@ -10,15 +10,32 @@ Youtube data scraper
 
 ## PARAMETERS
 
-You can choose the amount of channels it should scrap:
+It's is possible to choose the amount of channels you'd like to scrap. You can also apply some filters to your query. To do so, follow these steps:
 
 - at project level, create a file called `properties.json`
 - the content of the file should follow this templace:
 ```
 {
-    "minChannelAmount" : 3
+    "minChannelAmount" : 10,
+    "minSubscriptions" : 0,
+    "maxSubscriptions" : 0,
+    "minTotalViews" : 0,
+    "maxTotalViews" : 0,
+    "minAvgRecentViews" : 0,
+    "maxAvgRecentViews" : 0
 }
 ```
+
+`minChannelAmount`: the amount of channels the script should scrap.
+`minSubscriptions`: will ignore channels with fewer subscritions than this value
+`maxSubscriptions`: will ignore channels with more subscritions than this value
+`minTotalViews`: will ignore channels with fewer total views than this value
+`maxTotalViews`: will ignore channels with more total views than this value
+`minAvgRecentViews`: will ignore channels with fewer average recent views than this value
+`maxAvgRecentViews`: will ignore channels with more average recent views than this value
+
+It's possible to remove a filter by removing the line of by setting the value to `0`
+
 
 ## Blacklist
 

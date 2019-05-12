@@ -1,5 +1,8 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs')
+const fs = require('fs');
+const blacklist = require('./util/blacklist');
+const yt = require('./util/youtube');
+
 var properties = {}
 if (fs.existsSync('./properties.json')) {
     properties = require('./properties.json');
@@ -7,178 +10,139 @@ if (fs.existsSync('./properties.json')) {
     properties = {}
 }
 
-var blacklist = []
-if (fs.existsSync('./blacklist.txt')) {
-    fs.readFile("./blacklist.txt", function(err, buf) {
-        blacklisted = buf.toString().split("\n")
-        for (var i = 0; i < blacklisted.length; i++) {
-            blacklistedItem = blacklisted[i].replace("\r", "")
-            if (blacklistedItem) {
-                console.log(blacklistedItem)
-                blacklist.push(blacklistedItem)
-            }
-        }
-      })
-}
+const blacklistedIds = blacklist.getBlacklistedChannelIds()
+const blacklistedNames = blacklist.getBlacklistedChannelLinks()
+const blacklisted = blacklistedIds.concat(blacklistedNames)
 
-if (fs.existsSync('./blacklist_links.txt')) {
-    fs.readFile("./blacklist_links.txt", function(err, buf) {
-    const blacklisted_links = buf.toString().split("\n")
-    console.log("blacklisted links")
-    for (var i = 0; i < blacklisted_links.length; i++) {
-        const splitted = blacklisted_links[i].split("/")
-        var link
-        if (splitted[0].startsWith("www")) {
-            link = blacklisted_links[i].split("/")[2]
-        } else {
-            link = blacklisted_links[i].split("/")[4]
-        } 
+const minChannelAmount = properties.minChannelAmount || 20 // default value
+const minSubscriptions = properties.minSubscriptions
+const maxSubscriptions = properties.maxSubscriptions
+const minTotalViews = properties.minTotalViews
+const maxTotalViews = properties.maxTotalViews
+const minAvgRecentViews = properties.minAvgRecentViews
+const maxAvgRecentViews = properties.maxAvgRecentViews
 
-        if (link) link = link.replace("\r", "")
-
-        if (link) {
-            console.log(`blacklisting (link) ${link}`)
-            blacklist.push(link.replace("\r", ""))
-        }
-    }
-  })
-}
-
-function checkBlacklisted(channel) {
-    for (i = 0; i < blacklist.length; i++) {
-        if (channel.endsWith(blacklist[i])) {
-            console.log(`channel ${channel} is blacklisted by ${blacklist[i]} - index: ${i}`)
-            return true
-        }
-    }
-    return false
-}
+var browser;
 
 (async () => {
-    
-    const minChannelAmount = properties.minChannelAmount || 20 // default value
 
-    console.log(process.argv)
     const searchQuery = process.argv.slice(2).toString().split(",").join("+")
-    console.log(`search query: ${searchQuery}`)
-    const searchQueryFormatted = searchQuery.split(" ").join("+")
-    const channelSearch = `https://www.youtube.com/results?search_query=${searchQueryFormatted}&sp=EgIQAg%253D%253D`
+    const channelSearch = yt.getQueryUrl(searchQuery)
 
-    console.log(`opening channels: ${channelSearch}`)
-    // setting browser up
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
         args: ['--lang=en']
-    });
-    const page = await browser.newPage()
-    await page.goto(channelSearch)
-    await page.screenshot({path: 'screenshots/channels.png'})
+    })
 
-   var _items = await page.evaluate(() => {
-       const elements = document.querySelectorAll("a.yt-simple-endpoint.style-scope.ytd-channel-renderer")
-       const output = []
-       for (var i = 0; i < elements.length; i++) {
-           output.push(elements[i].href)
-       }
-       return output
-   })
+    //This one will be used to search the channels...
+    const channelsPage = await browser.newPage()
 
-   _items = _items.concat([]).filter(x => !checkBlacklisted(x))
-   itemCount = _items.length
+    // ... and this one will navigate to each channel page to extrat data
+    const dataPage = await browser.newPage()
 
-   console.log(`found ${itemCount} channels`)
+    //Stores data which will be exported at the end
+    const data = []
 
-   while (itemCount < minChannelAmount) {
-       console.log(`not enough items...`)
-        _items = _items = await page.evaluate(() => {
-            const elements = document.querySelectorAll("a.yt-simple-endpoint.style-scope.ytd-channel-renderer")
+    //Searching for channels for given query
+    await channelsPage.goto(channelSearch)
+    await channelsPage.screenshot({path: 'screenshots/channels.png'})
+
+    var channelIndex = 0
+
+    //to get outside of this loop, I'm checking if I have enough items at the end of it
+    while (true) {
+
+        var channels = await channelsPage.evaluate(querySelector => {
+            const elements = document.querySelectorAll(querySelector)
             const output = []
             for (var i = 0; i < elements.length; i++) {
                 output.push(elements[i].href)
             }
             return output
-        })
+        }, yt.channelQuerySelector)
+
+        console.log(`found ${channels.length} channels...`)
         
-        _items = _items.concat([]).filter(x => !checkBlacklisted(x))
-        itemCount = _items.length
-        
-        console.log(`new item count...${itemCount}`)
-        previousHeight = await page.evaluate('document.querySelector("ytd-app").scrollHeight');
-        await page.evaluate('window.scrollTo(0, document.querySelector("ytd-app").scrollHeight)');
-        await page.waitForFunction(`document.querySelector("ytd-app").scrollHeight > ${previousHeight}`);
-   }
+        //Iterate over channels we found. ignore blacklisted, apply filters and so on
+        for (; channelIndex < channels.length; channelIndex++) {
+            channel = channels[channelIndex]
+            const splitted = channel.split("/")
+            //filter blacklisted channels
+            if (blacklisted.includes(splitted[splitted.length-1])) {
+                console.log(`${channel} is blacklisted`)
+            } else {
+                //Navigate to about page...
+                console.log(`extracting data from ${channel}`)
+                console.log("...about")
+                await dataPage.goto(yt.getAboutPage(channel))
 
-    var channelLinks = []
-    
-    for (i = 0; i < minChannelAmount; i++) {
-        channelLinks.push(_items[i])
-    }
+                //Scrolling up so it'll load the header elements
+                await dataPage.evaluate(() => {
+                    window.scrollBy(0, -1000)
+                })
 
-    const channelsData = []
+                //Extracting data from "about" page
+                var aboutPageData = await dataPage.evaluate(selectors => {
 
-    async function extractDataChannel(page) {
+                    const output = {}
+                    
+                    //title
+                    titleElement = document.querySelector(selectors.divTitle) || document.querySelector(selectors.spanTitle) || { innerText: "---" }
+                    output.title = titleElement.innerText
 
-        function exportData(data) {
-            const csv = [["Title", "Subscriptions", "Total_Views", "Most_Views_Recent", "Least_Views_Recent", "Avg_Views_Recent", "Link"]]
-            for (i = 0; i < data.length; i++) {
-                const row = []
-                const channelData = data[i]
-                row.push(channelData.title.split(",").join(" "))
+                    //subscriptions
+                    const subCounter =  document.querySelector(selectors.subscribersCount)
+                    if (subCounter) {
+                        subsCounterText = subCounter.innerHTML
+                        if (subsCounterText) {
+                            output.subscriptions = subsCounterText.split(" ")[0].split(",").join("")
+                        }
+                    }
 
-                if (channelData.subscriptions)
-                    row.push(channelData.subscriptions.split(",").join(""))
-                else 
-                    row.push("")
+                    //views
+                    const rightColumnElements = document.querySelectorAll(selectors.rightColumn)
+                    for (i = 0; i < rightColumnElements.length; i++) {
+                        const elementText = rightColumnElements[i].innerText
+                        if (elementText.endsWith("views")) {
+                            output.views = elementText.split(" ")[0].split(",").join("")
+                            break
+                        }
+                    }
 
-                if (channelData.views)
-                    row.push(channelData.views.split(",").join(""))
-                else 
-                    row.push("")
+                    return output
+            
+                }, yt.channelAboutSelectors)
 
-                const recentViews = channelData.recentViews || {}
+                // Applying filters
+                if (minSubscriptions)
+                    if (aboutPageData.subscriptions < minSubscriptions){
+                        console.log("too few subscriptions")
+                        continue
+                    }
+                
+                if (maxSubscriptions)
+                    if (aboutPageData.subscriptions > maxSubscriptions) {
+                        console.log("too many subscriptions")
+                        continue
+                    }
 
-                if (recentViews.mostPop) {
-                    row.push(recentViews.mostPop)
-                } else {
-                    row.push("")
-                }
+                if (minTotalViews)
+                    if (!aboutPageData.views || aboutPageData.views < minTotalViews) {
+                        console.log("too few total views")
+                        continue
+                    }
 
-                if (recentViews.leastPop) {
-                    row.push(recentViews.leastPop)
-                } else {
-                    row.push("")
-                }
+                if (maxTotalViews)
+                    if (!aboutPageData.views || aboutPageData.views > maxTotalViews) {
+                        console.log("too many total views")
+                        continue
+                    }
 
-                if (recentViews.average) {
-                    row.push(recentViews.average)
-                } else {
-                    row.push("")
-                }
 
-                row.push(channelData.channel)
-                csv.push(row.join(","))
-            }
-            console.log(data)
-            console.log(csv)
-            const fs = require('fs');
-            fs.writeFile("exp.csv", csv.join("\n"), function(err) {
-                if(err) {
-                    return console.log(err)
-                }
-
-                console.log("The file was saved!")
-            }); 
-        }
-
-        async function mock() {
-            const page = await browser.newPage()
-        }
-
-        async function extractVideosData(data, channel, page) {
-            //navigate to videos page
-            try {
-                console.log(`getting video data from ${channel}/videos?view=0&sort=dd&flow=grid`)
-                await page.goto(`${channel}/videos?view=0&sort=dd&flow=grid`)
-                var views = await page.evaluate(() => {
+                console.log("...videos")
+                //Navigate to "videos" page
+                await dataPage.goto(yt.getVideosPage(channel))
+                //Extracting lastest videos data
+                var videoPageData = await dataPage.evaluate(() => {
 
                     //convert views count string to integer value
                     function parseViews(value) {
@@ -236,73 +200,99 @@ function checkBlacklisted(channel) {
                     }
                 })
 
-                data.recentViews = views
-            } catch (ex) {
-                console.log("error!")
-                console.error(ex)
+                //Applying filters again
+                if (minAvgRecentViews)
+                    if (!videoPageData.average || videoPageData.average < minAvgRecentViews) {
+                        console.log("too few average recent views")
+                        continue
+                    }
+
+                if (maxAvgRecentViews)
+                    if (!videoPageData.average || videoPageData.average > maxAvgRecentViews) {
+                        console.log("too many average recent views")
+                        continue
+                    }
+
+                data.push({
+                    aboutPageData: aboutPageData,
+                    videoPageData: videoPageData,
+                    channel: channel
+                })
+
+                //If there are enough items, stop scraping
+                if (data.length == minChannelAmount) {
+                    break
+                }
             }
         }
-        
-        if (channelLinks.length > 0) {
-            const _channel = channelLinks.shift()
-            const channel = `${_channel}/about`
-            console.log(`extracting data from ${channel}`)
-            await page.goto(channel)
 
-            await page.evaluate(() => {
-                window.scrollBy(0, -1000)
-            })
-
-            var data = await page.evaluate(() => {
-
-                const output = {}
-                
-                //title
-                titleElement = document.querySelector("div#details > div#title") || document.querySelector("span#channel-title") || { innerText: "---" }
-                output.title = titleElement.innerText
-
-                //subscriptions
-                const subCounter =  document.querySelector("#subscriber-count")
-                if (subCounter) {
-                    subsCounterText = subCounter.innerHTML
-                    if (subsCounterText) {
-                        output.subscriptions = subsCounterText.split(" ")[0]
-                    }
-                }
-
-                //views
-                const rightColumnElements = document.querySelectorAll("#right-column > yt-formatted-string")
-                for (i = 0; i < rightColumnElements.length; i++) {
-                    const elementText = rightColumnElements[i].innerText
-                    if (elementText.endsWith("views")) {
-                        output.views = elementText.split(" ")[0]
-                        break
-                    }
-                }
-
-                return output
-        
-            })
-
-            const filename = JSON.stringify(data.title).replace(/\W/g, '')
-            data.filename = filename
-
-            await page.screenshot({path: `screenshots/${filename}.png`})
-
-            data.channel = _channel
-
-            await extractVideosData(data, data.channel, page)
-
-            channelsData.push(data)
-
-            await extractDataChannel(page)
+        //now we check if there if there're enough items and, if not, scroll down so we can load more
+        if (data.length < minChannelAmount) {
+            previousHeight = await channelsPage.evaluate('document.querySelector("ytd-app").scrollHeight')
+            await channelsPage.evaluate('window.scrollTo(0, document.querySelector("ytd-app").scrollHeight)')
+            try {
+                await channelsPage.waitForFunction(`document.querySelector("ytd-app").scrollHeight > ${previousHeight}`, {timeout: 10000})
+            } catch(ex) {
+                console.log("Not enough items. Scraping is over")
+                break
+            }
         } else {
-            browser.close()
-            exportData(channelsData)
+            break
         }
     }
 
-    console.log(channelLinks)
 
-    extractDataChannel(page)
-})();
+    //Exporting data into csv file
+    const csv = [["Title", "Subscriptions", "Total_Views", "Most_Views_Recent", "Least_Views_Recent", "Avg_Views_Recent", "Link"]]
+    for (i = 0; i < data.length; i++) {
+        const row = []
+        const channelData = data[i]
+        row.push(channelData.aboutPageData.title.split(",").join(" "))
+
+        if (channelData.aboutPageData.subscriptions)
+            row.push(channelData.aboutPageData.subscriptions.split(",").join(""))
+        else 
+            row.push("")
+
+        if (channelData.aboutPageData.views)
+            row.push(channelData.aboutPageData.views.split(",").join(""))
+        else 
+            row.push("")
+
+        const recentViews = channelData.videoPageData || {}
+
+        if (recentViews.mostPop) {
+            row.push(recentViews.mostPop)
+        } else {
+            row.push("")
+        }
+
+        if (recentViews.leastPop) {
+            row.push(recentViews.leastPop)
+        } else {
+            row.push("")
+        }
+
+        if (recentViews.average) {
+            row.push(recentViews.average)
+        } else {
+            row.push("")
+        }
+
+        row.push(channelData.channel)
+        csv.push(row.join(","))
+    }
+
+    //console.log(data)
+    console.log(csv)
+    const fs = require('fs');
+    fs.writeFile("exp.csv", csv.join("\n"), function(err) {
+        if(err) {
+            return console.log(err)
+        }
+
+        console.log("The file was saved!")
+    }); 
+
+    browser.close()
+})()
