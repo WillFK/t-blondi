@@ -1,8 +1,8 @@
-# T-blondi
+# T-BLONDI
 
 Youtube data scraper
 
-## setup
+## SETUP
 
 - install node.js (windows, mac, linux...)
 - install dependencies by runnig: `npm i puppeteer `
@@ -13,7 +13,7 @@ Youtube data scraper
 It's is possible to choose the amount of channels you'd like to scrap. You can also apply some filters to your query. To do so, follow these steps:
 
 - at project level, create a file called `properties.json`
-- the content of the file should follow this templace:
+- the content of the file should follow this template:
 ```
 {
     "minChannelAmount" : 10,
@@ -37,7 +37,7 @@ It's is possible to choose the amount of channels you'd like to scrap. You can a
 It's possible to remove a filter by removing the line of by setting the value to `0`
 
 
-## Blacklist
+## BLACKLIST
 
 There are two way to blacklist channels and users, and they can be used at the same time.
 If you want to blacklist by channel / user id, then:
