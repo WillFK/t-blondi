@@ -53,7 +53,7 @@ ESLBRASIL
 If you want to blacklist by channel / user link, then:
 
 - create a file called `blacklist_links.txt`;
-- then insert the link of the pages you want to ignore to the file, like:
+- insert the link of the pages you want to ignore to the file, like:
 ```
 https://www.youtube.com/user/ThePhylol/
 https://www.youtube.com/user/albertsunzheng/about
