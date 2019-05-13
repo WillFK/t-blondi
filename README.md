@@ -34,7 +34,7 @@ It's is possible to choose the amount of channels you want to scrap. You can als
 - `minAvgRecentViews`: will ignore channels with fewer average recent views than this value;
 - `maxAvgRecentViews`: will ignore channels with more average recent views than this value.
 
-It's possible to remove a filter by removing the property or by setting the value to `0`.
+The script will ignore any filter for which the value is set to 0.
 
 
 ## BLACKLIST
@@ -42,7 +42,7 @@ It's possible to remove a filter by removing the property or by setting the valu
 There are two way to blacklist channels and users, and they can be used at the same time.
 If you want to blacklist by channel / user id, then:
 
-- create a file called `blacklist.txt`
+- create a file called `blacklist.txt`;
 - add the id of the channels you want to ignore to it, like:
 ```
 UCkGthGTWjI2awl1pqCQRncQ
