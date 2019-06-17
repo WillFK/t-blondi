@@ -87,7 +87,12 @@ typings/
 
 screenshots/*
 !screenshots/.gitkeep
+
+output/*
+!output/.gitkeep
+
 properties.json
 exp.csv
 blacklist.txt
 blacklist_links.txt
+template.txt

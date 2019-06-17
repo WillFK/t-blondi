@@ -2,8 +2,11 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const blacklist = require('./util/blacklist');
 const yt = require('./util/youtube');
+const exporter = require('./util/export');
+const template = require('./util/template');
 
 var properties = {}
+
 if (fs.existsSync('./properties.json')) {
     properties = require('./properties.json');
 } else {
@@ -28,6 +31,7 @@ var browser;
 
     const searchQuery = process.argv.slice(2).toString().split(",").join("+")
     const channelSearch = yt.getQueryUrl(searchQuery)
+    const baseFileName = JSON.stringify(process.argv.slice(2).toString().split(",").join("_")).replace(/\W/g, '')
 
     browser = await puppeteer.launch({
         args: ['--lang=en']
@@ -144,6 +148,17 @@ var browser;
                 //Extracting lastest videos data
                 var videoPageData = await dataPage.evaluate(() => {
 
+                    function median(values) {
+                        values.sort()
+                        var median
+                        if (values.length % 2) {
+                            median = values[(values.length-1) / 2]
+                        } else {
+                            median = (values[values.length/2-1] + values[values.length/2])/2
+                        }
+                        return median
+                    }
+
                     //convert views count string to integer value
                     function parseViews(value) {
                         if (value.endsWith("K")) {
@@ -172,11 +187,13 @@ var browser;
                     var max = 0
                     var sum = 0
                     var labels = []
+                    var viewValues = []
                     for (i = 0; i < viewLabels.length; i++) {
                         
                         const label = viewLabels[i].innerText
                         labels.push(label)
                         const viewCount = parseViews(label.split(" ")[0])
+                        viewValues.push(viewCount)
                         sum += viewCount
                         
                         if (viewCount > max) {
@@ -195,6 +212,7 @@ var browser;
                         "mostPop": max,
                         "leastPop": min,
                         "average": Math.round(avg),
+                        "median": median(viewValues),
                         "sum" : sum,
                         "count": viewLabels.length
                     }
@@ -243,56 +261,48 @@ var browser;
 
 
     //Exporting data into csv file
-    const csv = [["Title", "Subscriptions", "Total_Views", "Most_Views_Recent", "Least_Views_Recent", "Avg_Views_Recent", "Link"]]
+    var exportableData = []
+    var defaultFields = ["Influencer", "subs_count", "view_count", "most_views_recent", "least_views_recent", "avg_view", "median_views", "about_link"]
+    var templateFields = template.getTemplate()
+    
     for (i = 0; i < data.length; i++) {
-        const row = []
         const channelData = data[i]
-        row.push(channelData.aboutPageData.title.split(",").join(" "))
+        var exportable = {}
+        exportable.Influencer = channelData.aboutPageData.title.split(",").join(" ")
 
         if (channelData.aboutPageData.subscriptions)
-            row.push(channelData.aboutPageData.subscriptions.split(",").join(""))
-        else 
-            row.push("")
+            exportable.subs_count = channelData.aboutPageData.subscriptions.split(",").join("")
 
         if (channelData.aboutPageData.views)
-            row.push(channelData.aboutPageData.views.split(",").join(""))
-        else 
-            row.push("")
+            exportable.view_count = channelData.aboutPageData.views.split(",").join("")
 
         const recentViews = channelData.videoPageData || {}
 
         if (recentViews.mostPop) {
-            row.push(recentViews.mostPop)
-        } else {
-            row.push("")
+            exportable.most_views_recent = recentViews.mostPop
         }
 
         if (recentViews.leastPop) {
-            row.push(recentViews.leastPop)
-        } else {
-            row.push("")
+            exportable.least_views_recent = recentViews.leastPop
         }
 
         if (recentViews.average) {
-            row.push(recentViews.average)
-        } else {
-            row.push("")
+            exportable.avg_view = recentViews.average
         }
 
-        row.push(channelData.channel)
-        csv.push(row.join(","))
+        if (recentViews.median) {
+            exportable.median_views = recentViews.median
+        }
+
+        exportable.about_link = channelData.channel
+        exportableData.push(exportable)
     }
 
-    //console.log(data)
-    console.log(csv)
-    const fs = require('fs');
-    fs.writeFile("exp.csv", csv.join("\n"), function(err) {
-        if(err) {
-            return console.log(err)
-        }
+    exporter.exportData(`./output/${baseFileName}.csv`, exportableData, defaultFields)
 
-        console.log("The file was saved!")
-    }); 
+    if (templateFields && templateFields.length > 0) {
+        exporter.exportData(`./output/${baseFileName}_formatted.csv`, exportableData, templateFields)
+    }
 
     browser.close()
 })()

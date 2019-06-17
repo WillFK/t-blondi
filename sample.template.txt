@@ -1,0 +1,1 @@
+ID	Influencer	platform	manager	country	language	category	category_adv	comms	contact	game 	subs_count	view_count	video_count	avg_view	median_views	fixed_fee	var_fee_k	threshold	eCPM	campaing_name	adjust_tracker	adjust_link	about_link	customURL	channel_id	Twitch_Channel	contract_link	Comment	Status

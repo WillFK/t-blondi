@@ -6,7 +6,8 @@ Youtube data scraper.
 
 - install node.js (windows, mac, linux...);
 - install dependencies by runnig: `npm i puppeteer `;
-- run the program: `node blondi.js [your query here]`.
+- run the program: `node blondi.js [your query here]`;
+- the output (csv files) will be available inside the `output` folder, and it will be named `{you query}.csv`.
 
 ## PARAMETERS
 
@@ -59,3 +60,20 @@ https://www.youtube.com/user/ThePhylol/
 https://www.youtube.com/user/albertsunzheng/about
 https://www.youtube.com/user/hastadpelis/about
 ```
+
+## TEMPLATE
+
+It's possible to provide a template for the output format. To do so:
+
+- create a file `template.txt` inside the project's folder;
+- in the file, insert the columns you expect. The values must be separated by a tab;
+- run the script;
+- the formatted output will be named `{you_query}_formatted.csv`.
+
+These are the supported values so far:
+
+`"Influencer", "subs_count", "view_count", "most_views_recent", "least_views_recent", "avg_view", "median_views", "about_link"`
+
+If you provide a unsupported value, it will insert a empty String instead.
+
+There's an sample file `sample.template.txt` available in case you'd like to see how's the template is supposed to look like.
