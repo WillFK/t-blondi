@@ -87,6 +87,19 @@ var browser;
                 //Extracting data from "about" page
                 var aboutPageData = await dataPage.evaluate(selectors => {
 
+                    function getChannelId() {
+                        var result = null
+                        var link = document.querySelector("link[rel='alternate']")
+                        if (link) {
+                            var href = link.href
+                            if (href) {
+                                var chunks = href.split("/")
+                                result = chunks[chunks.length - 1]
+                            }
+                        }
+                        return result
+                    }
+
                     const output = {}
                     
                     //title
@@ -112,9 +125,13 @@ var browser;
                         }
                     }
 
+                    output.channelId = getChannelId()
+
                     return output
             
                 }, yt.channelAboutSelectors)
+
+                aboutPageData.handle = yt.getUserHandle(dataPage.url())
 
                 // Applying filters
                 if (minSubscriptions)
@@ -262,7 +279,7 @@ var browser;
 
     //Exporting data into csv file
     var exportableData = []
-    var defaultFields = ["Influencer", "subs_count", "view_count", "most_views_recent", "least_views_recent", "avg_view", "median_views", "about_link"]
+    var defaultFields = ["Influencer", "subs_count", "view_count", "most_views_recent", "least_views_recent", "avg_view", "median_views", "about_link", "customURL", "channel_id"]
     var templateFields = template.getTemplate()
     
     for (i = 0; i < data.length; i++) {
@@ -292,6 +309,14 @@ var browser;
 
         if (recentViews.median) {
             exportable.median_views = recentViews.median
+        }
+
+        if (channelData.aboutPageData.handle) {
+            exportable.customURL = channelData.aboutPageData.handle
+        }
+
+        if (channelData.aboutPageData.channelId) {
+            exportable.channel_id = channelData.aboutPageData.channelId
         }
 
         exportable.about_link = channelData.channel
